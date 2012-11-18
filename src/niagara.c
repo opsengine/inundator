@@ -46,7 +46,7 @@
 #include <sys/stat.h>
 #include <regex.h>
 
-#define MAX_EVENTS 512
+#define MAX_EVENTS 64
 #define MAX_HEADERS 256
 #define WRITE_BUFFER_SIZE 1024
 #define READ_BUFFER_SIZE 16384
@@ -176,7 +176,7 @@ int http_read_response(struct http_client *client)
         while (buffer_ptr < read_buffer + ret) {
             // parse response (works with \r\n separator and non-chunked only!)
             int status = read_status_line(buffer_ptr);
-            //if (status != 200) printf("STATUS %d\n", status);
+            if (status != 200) ; //printf("STATUS %d\n", status);
             int content_length = -1;
             int read_bytes = 0;
             while ((buffer_ptr = read_next_line(buffer_ptr, &read_bytes)) != NULL) {
