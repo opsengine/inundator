@@ -15,3 +15,8 @@
 *.exe
 *.out
 *.app
+
+*.deps
+*.log
+*.cache
+src/niagara
