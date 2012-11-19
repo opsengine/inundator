@@ -51,10 +51,19 @@
 #define WRITE_BUFFER_SIZE 1024
 #define READ_BUFFER_SIZE 16384
 #define CONTENT_LENGTH "Content-Length"
+#define CHUNKED_HEADER "Transfer-Encoding: chunked"
+#define LAST_CHUNK "0\r\n\r\n"
 
 struct http_client {
     int sockfd;
     int pending;
+    int transfer;
+};
+
+enum transfer_mode {
+    UNKNOWN,
+    FIXED,
+    CHUNKED
 };
 
 struct endpoint {
@@ -119,6 +128,8 @@ void http_connect(struct http_client *client, struct addrinfo *addr)
     else {
         printf("ERR %d\n", errno);
     }
+    client->pending = 0;
+    client->transfer = 0;
 }
 
 void http_close(struct http_client *client)
@@ -171,12 +182,21 @@ int http_read_response(struct http_client *client)
         error("Read buffer filled up! This is not implemented yet :(");
     }
     if (ret > 0) {
+        read_buffer[ret] = '\0';
         int response_count = 0;
         char *buffer_ptr = read_buffer;
+        if (client->transfer == 1) {
+            char *last = strstr(buffer_ptr, LAST_CHUNK);
+            if (last != NULL) {
+                buffer_ptr = last + sizeof(LAST_CHUNK);
+                client->transfer = 0;
+                response_count = 1;
+            }
+        }
         while (buffer_ptr < read_buffer + ret) {
-            // parse response (works with \r\n separator and non-chunked only!)
+            // parse response
+            enum transfer_mode mode = UNKNOWN;
             int status = read_status_line(buffer_ptr);
-            if (status != 200) ; //printf("STATUS %d\n", status);
             int content_length = -1;
             int read_bytes = 0;
             while ((buffer_ptr = read_next_line(buffer_ptr, &read_bytes)) != NULL) {
@@ -184,12 +204,35 @@ int http_read_response(struct http_client *client)
                     //headers read
                     break;
                 }
-                if (strncmp(buffer_ptr, CONTENT_LENGTH, sizeof(CONTENT_LENGTH)-1) == 0) {
-                    content_length = atoi(buffer_ptr + sizeof(CONTENT_LENGTH) + 1);
+                if (mode == UNKNOWN) {
+                    if (strncasecmp(buffer_ptr, CONTENT_LENGTH, sizeof(CONTENT_LENGTH)-1) == 0) {
+                        content_length = atoi(buffer_ptr + sizeof(CONTENT_LENGTH) + 1);
+                        mode = FIXED;
+                    }
+                    else if (strncasecmp(buffer_ptr, CHUNKED_HEADER, sizeof(CHUNKED_HEADER)-1) == 0) {
+                        mode = CHUNKED;
+                    }
                 }
             }
-            buffer_ptr += content_length;
-            response_count++;
+            if (mode == FIXED) {
+                buffer_ptr += content_length;
+                response_count++;
+            }
+            else if (mode == CHUNKED) {
+                char *last = strstr(buffer_ptr, LAST_CHUNK);
+                if (last == NULL) {
+                    client->transfer = 1;
+                    buffer_ptr += strlen(buffer_ptr);
+                }
+                else {
+                    response_count++;
+                    buffer_ptr = last + sizeof(LAST_CHUNK);
+                }
+            }
+            else {
+                printf("Cannot detect the transfer mode\n");
+                exit(1);
+            }
         }
         client->pending -= response_count;
         return response_count;
@@ -293,8 +336,10 @@ void run()
             }
             if ((events[i].events & EPOLLOUT && (max_requests == -1 || request_count < max_requests))) {
                 // socket ready for writing
-                http_send_request(client, write_buffer, write_buffer_length);
-                request_count++;
+                if (client->pending == 0) {
+                    http_send_request(client, write_buffer, write_buffer_length);
+                    request_count++;
+                }
             }
         }
         //TODO estimate rate and print it from time to time
@@ -333,8 +378,8 @@ int match(char *str, char *regex_str, regmatch_t *pmatch, int nmatch) {
 }
 
 int parse_url(char *url, struct endpoint *ep) {
-    char *reg1 = "^(http):\\/\\/([^/:]+):([0-9]+)(/.*)$"; //url with port
-    char *reg2 = "^(http):\\/\\/([^/:]+)()(/.*)$"; //url without port
+    char *reg1 = "^(http)://([^/:]+):([0-9]+)(/.*)$"; //url with port
+    char *reg2 = "^(http)://([^/:]+)()(/.*)$"; //url without port
     int match_count = 5;
     regmatch_t pmatch[match_count];
     if (!match(url, reg1, pmatch, match_count) && !match(url, reg2, pmatch, match_count)) {
@@ -347,7 +392,7 @@ int parse_url(char *url, struct endpoint *ep) {
     memcpy(ep->host, url + pmatch[2].rm_so, hostlen);
     memcpy(ep->path, url + pmatch[4].rm_so, pathlen);
     ep->host[hostlen] = '\0';
-    ep->path[hostlen] = '\0';
+    ep->path[pathlen] = '\0';
     if (pmatch[3].rm_so == pmatch[3].rm_eo)
         ep->port = 80;
     else

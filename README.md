@@ -1,4 +1,19 @@
 niagara
 =======
 
-A simple HTTP flood tool
+Niagara is a very basic HTTP tool, written to find the maximum throughput a computer can physically produce, in terms of requests per second.
+
+Everything runs in one thread, for maximum performance. It only supports plain HTTP connections.
+
+$ niagara --help 
+
+Usage: niagara [OPTIONS...] URL
+   OPTIONS
+      -n, --requests=N       Total number of requests
+      -c, --concurrency=N    Number of concurrent connections
+      -H, --header           Add a HTTP header
+      -h, --help             Display this help and exit
+
+Send 1M requests to your localhost web server, adding a custom header:
+
+$ niagara -n 1000000 -c 1000 -H "Connection: keep-alive" http://localhost/path
