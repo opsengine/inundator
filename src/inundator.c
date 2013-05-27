@@ -357,13 +357,13 @@ exit_loop:
 
 void print_usage(FILE *stream, int exit_code)
 {
-    fprintf(stream, "Usage: niagara [OPTIONS...] URL\n");
+    fprintf(stream, "Usage: inundator [OPTIONS...] URL\n");
     fprintf(stream, "   OPTIONS\n");
     fprintf(stream, "      -n, --requests=N       Total number of requests\n");
     fprintf(stream, "      -c, --concurrency=N    Number of concurrent connections\n");
     fprintf(stream, "      -H, --header           Add a HTTP header\n");
     fprintf(stream, "      -h, --help             Display this help and exit\n");
-    fprintf(stream, "\nReport bugs to https://github.com/opsengine/niagara\n");
+    fprintf(stream, "\nReport bugs to https://github.com/opsengine/inundator\n");
     exit(exit_code);
 }
 

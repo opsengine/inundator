@@ -1,14 +1,14 @@
-niagara
+Inundator
 =======
 
-Niagara is a very basic HTTP tool, written to find the maximum throughput a computer can physically produce, in terms of requests per second.
+Inundator is a very basic HTTP tool, written to find the maximum throughput a computer can physically produce, in terms of requests per second.
 
 Everything runs in one thread, for maximum performance. Only plain HTTP is supported.
 
 ````bash
-$ niagara --help 
+$ inundator --help 
 
-Usage: niagara [OPTIONS...] URL
+Usage: inundator [OPTIONS...] URL
    OPTIONS
       -n, --requests=N       Total number of requests
       -c, --concurrency=N    Number of concurrent connections
@@ -19,5 +19,5 @@ Usage: niagara [OPTIONS...] URL
 Send 1M requests to your localhost web server, adding a custom header:
 
 ````bash
-$ niagara -n 1000000 -c 1000 -H "Connection: keep-alive" http://localhost/path
+$ inundator -n 1000000 -c 1000 -H "Connection: keep-alive" http://localhost/path
 ````

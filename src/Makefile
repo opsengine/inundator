@@ -1,14 +1,14 @@
 CC?=gcc
 CFLAGS?=-Wall -g -O2
-TARGETS=niagara
+TARGETS=inundator
 #LIBS=
 
 UNAME := $(shell uname)
 
 all::	$(TARGETS) $(LIBS)
 
-niagara: niagara.c $(LIBS)
-	$(CC) -o niagara niagara.c $(LIBS) $(CFLAGS)
+inundator: inundator.c $(LIBS)
+	$(CC) -o inundator inundator.c $(LIBS) $(CFLAGS)
 
 clean:
 	rm -f *~ *.o $(TARGETS)
